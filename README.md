@@ -1,5 +1,7 @@
 # qec-decoder-bench
 
+[![tests](https://github.com/VedantMahadik-qc/qec-decoder-bench/actions/workflows/tests.yml/badge.svg)](https://github.com/VedantMahadik-qc/qec-decoder-bench/actions/workflows/tests.yml)
+
 A benchmark of quantum error-correction decoders, built on [Stim](https://github.com/quantumlib/Stim)
 (circuits and detector error models), [PyMatching](https://github.com/oscarhiggott/PyMatching)
 (minimum-weight perfect matching), BP-OSD from [`ldpc`](https://github.com/quantumgizmos/ldpc), and
