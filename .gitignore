@@ -21,3 +21,4 @@ dist/
 !results/cc_gross_vs_surface.csv
 !results/decoder_timing.csv
 results/scratch/
+results/reproduced/
