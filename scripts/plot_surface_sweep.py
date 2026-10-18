@@ -7,7 +7,14 @@ import argparse
 import math
 from pathlib import Path
 
-from qec_bench.analysis import find_crossings, fit_low_p_slope
+import numpy as np
+
+from qec_bench.analysis import (
+    bootstrap_crossings,
+    find_crossings,
+    fit_low_p_slope,
+    ps_within_n_sigma,
+)
 from qec_bench.plotting import load_stats, plot_logical_error_rate
 
 # Pre-registered band for "roughly 1%" (Stim doc/getting_started.ipynb, section 9).
@@ -24,6 +31,20 @@ def report_crossings(stats: list, per_round: bool) -> None:
         text = ", ".join(f"{c:.4%}" for c in crossings)
         in_band = all(THRESHOLD_BAND[0] <= c <= THRESHOLD_BAND[1] for c in crossings)
         print(f"  ({d_small},{d_large}) {unit}: {text}  in band {THRESHOLD_BAND}: {in_band}")
+
+
+def report_crossing_uncertainty(stats: list) -> None:
+    for d_small, d_large in [(3, 5), (5, 7)]:
+        boot = bootstrap_crossings(stats, d_small, d_large, n_boot=2000, seed=0)
+        found = boot[~np.isnan(boot)]
+        lo, med, hi = np.percentile(found, [2.5, 50, 97.5]) if found.size else (np.nan,) * 3
+        close = ps_within_n_sigma(stats, d_small, d_large, n_sigma=2.0)
+        print(
+            f"  ({d_small},{d_large}) per round: bootstrap median {med:.3%}, "
+            f"95% interval [{lo:.3%}, {hi:.3%}], no crossing in "
+            f"{np.isnan(boot).mean():.1%} of replicates"
+        )
+        print(f"    p where curves agree within 2 sigma: {[f'{p:.4%}' for p in close]}")
 
 
 def report_slopes(stats: list) -> None:
@@ -48,6 +69,8 @@ def main() -> None:
     print("Threshold crossings:")
     report_crossings(stats, per_round=True)
     report_crossings(stats, per_round=False)
+    print("Crossing uncertainty (binomial parametric bootstrap, 2000 replicates):")
+    report_crossing_uncertainty(stats)
     print("Low-p slopes (p <= 0.004, >= 100 errors; report only):")
     report_slopes(stats)
 
