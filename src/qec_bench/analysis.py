@@ -180,3 +180,25 @@ def bootstrap_crossings_from_counts(
         if found:
             results[i] = found[0]
     return results
+
+
+def any_of_copies_fail(rate_one: float, copies: int) -> float:
+    """P(at least one of `copies` independent code blocks fails). Exact for disjoint blocks."""
+    return 1 - (1 - rate_one) ** copies
+
+
+def matched_distance(target: float, rate_by_d: dict[int, float]) -> float | None:
+    """d* where the failure rate equals target, by linear interpolation of log rate in d.
+
+    Returns None if target is outside the sampled range of distances (no extrapolation)
+    or if a bracketing rate is zero.
+    """
+    ds = sorted(rate_by_d)
+    for d0, d1 in zip(ds, ds[1:]):
+        r0, r1 = rate_by_d[d0], rate_by_d[d1]
+        if r0 <= 0 or r1 <= 0 or target <= 0:
+            continue
+        if r1 <= target <= r0:
+            t = (math.log(target) - math.log(r0)) / (math.log(r1) - math.log(r0))
+            return d0 + t * (d1 - d0)
+    return None

@@ -1,6 +1,7 @@
 """Plots for the Phase 2 code-capacity experiments, from the committed CSVs.
 
     python scripts/plot_code_capacity.py threshold
+    python scripts/plot_code_capacity.py gross
 """
 
 import math
@@ -12,7 +13,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-from qec_bench.analysis import counts_by_p
+from qec_bench.analysis import any_of_copies_fail, counts_by_p
 from qec_bench.cc_sweep import SURFACE_DISTANCES, read_rows
 
 RESULTS = Path(__file__).resolve().parent.parent / "results"
@@ -42,5 +43,27 @@ def plot_threshold() -> None:
     fig.savefig(RESULTS / "cc_surface_threshold.png", dpi=150)
 
 
+def plot_gross() -> None:
+    """P(any of 12 logical qubits fails): one gross code vs 12 independent surface patches."""
+    rows = read_rows(RESULTS / "cc_gross_vs_surface.csv")
+    fig, ax = plt.subplots(figsize=(7, 5))
+    _errorbar(ax, counts_by_p(rows, "gross", 12, "bposd"),
+              "gross [[144,12,12]], BP-OSD (144 data qubits)", color="black", lw=2)
+    for d in SURFACE_DISTANCES:
+        counts = counts_by_p(rows, "surface", d, "mwpm")
+        ps = sorted(counts)
+        p12 = [any_of_copies_fail(counts[p][1] / counts[p][0], 12) for p in ps]
+        ax.plot(ps, p12, marker="o", ms=3, ls="--", label=f"12 x surface d={d}, MWPM ({12 * d * d} data)")
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.set_xlabel("physical bit-flip rate p")
+    ax.set_ylabel("P(any of 12 logical qubits fails) per shot")
+    ax.set_title("Code capacity: gross code vs 12 surface-code patches")
+    ax.grid(which="both", alpha=0.3)
+    ax.legend(fontsize=8)
+    fig.tight_layout()
+    fig.savefig(RESULTS / "cc_gross_vs_surface.png", dpi=150)
+
+
 if __name__ == "__main__":
-    {"threshold": plot_threshold}[sys.argv[1]]()
+    {"threshold": plot_threshold, "gross": plot_gross}[sys.argv[1]]()
