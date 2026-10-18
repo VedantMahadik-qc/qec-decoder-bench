@@ -11,8 +11,13 @@ dist/
 *.png
 !results/surface_sweep.png
 !results/notebook_replication.png
+!results/cc_*.png
+!results/decoder_timing.png
 *.csv
 !results/surface_sweep.csv
 !results/notebook_replication.csv
 !results/rounds_d_followup.csv
+!results/cc_surface_threshold.csv
+!results/cc_gross_vs_surface.csv
+!results/decoder_timing.csv
 results/scratch/

@@ -139,3 +139,44 @@ def fit_low_p_slope(
     log_p, log_rate = np.log(np.array(points)).T
     slope, _intercept = np.polyfit(log_p, log_rate, 1)
     return float(slope)
+
+
+# --- Code-capacity (Phase 2): the same estimators on plain (p, shots, errors) counts ------
+
+Counts = dict[float, tuple[int, int]]  # p -> (shots, errors)
+
+
+def counts_by_p(rows: list[dict], code: str, d: int, decoder: str) -> Counts:
+    """Select one curve from code-capacity CSV rows."""
+    return {
+        float(r["p"]): (int(r["shots"]), int(r["errors"]))
+        for r in rows
+        if r["code"] == code and int(r["d"]) == d and r["decoder"] == decoder
+    }
+
+
+def crossings_from_counts(small: Counts, large: Counts) -> list[float]:
+    """Per-shot crossings, via the same estimator as Phase 1 (crossings_from_rates)."""
+    def rates(c: Counts) -> dict[float, float]:
+        return {p: k / n for p, (n, k) in c.items()}
+    return crossings_from_rates(rates(small), rates(large))
+
+
+def bootstrap_crossings_from_counts(
+    small: Counts, large: Counts, n_boot: int = 2000, seed: int = 0
+) -> np.ndarray:
+    """Parametric bootstrap of the first crossing (same scheme as bootstrap_crossings).
+
+    Each replicate redraws every error count from Binomial(shots, errors/shots).
+    NaN marks replicates with no crossing.
+    """
+    rng = np.random.default_rng(seed)
+    results = np.full(n_boot, np.nan)
+    for i in range(n_boot):
+        redrawn = [
+            {p: (n, rng.binomial(n, k / n)) for p, (n, k) in c.items()} for c in (small, large)
+        ]
+        found = crossings_from_counts(*redrawn)
+        if found:
+            results[i] = found[0]
+    return results
