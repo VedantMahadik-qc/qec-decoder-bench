@@ -5,8 +5,8 @@ A benchmark of quantum error-correction decoders, built on [Stim](https://github
 (minimum-weight perfect matching), BP-OSD from [`ldpc`](https://github.com/quantumgizmos/ldpc), and
 sinter (parallel Monte Carlo).
 
-Roadmap: rotated surface code with PyMatching (Phase 1, below), then BP-OSD, then the
-[[144,12,12]] bivariate bicycle code.
+Roadmap: rotated surface code with PyMatching (Phase 1, below), then BP-OSD and the
+[[144,12,12]] bivariate bicycle ("gross") code under code-capacity noise (Phase 2, below).
 
 ## Usage
 
@@ -18,6 +18,14 @@ python scripts/run_surface_sweep.py --sweep replication   # -> results/notebook_
 python scripts/run_surface_sweep.py --sweep followup      # -> results/rounds_d_followup.csv
 python scripts/plot_surface_sweep.py results/surface_sweep.csv
 python scripts/plot_surface_sweep.py results/notebook_replication.csv
+
+# Phase 2 (code capacity). --smoke does a short timed run to results/scratch/ and prints an estimate.
+python scripts/run_code_capacity.py --exp threshold [--smoke]   # -> results/cc_surface_threshold.csv
+python scripts/run_code_capacity.py --exp gross [--smoke]       # -> results/cc_gross_vs_surface.csv
+python scripts/run_code_capacity.py --exp timing                # -> results/decoder_timing.csv
+python scripts/analyze_code_capacity.py threshold               # crossings + pre-registered check
+python scripts/analyze_code_capacity.py gross                   # matched d* and qubit counts
+python scripts/plot_code_capacity.py threshold                  # also: gross, timing
 ```
 
 All sweep CSVs are committed, so you can regenerate the plots and the validation numbers without
@@ -143,3 +151,193 @@ data-measurement round are not. With only d rounds, those boundary rounds make u
 of each shot, and that share differs between d=5 (5 rounds) and d=7 (7 rounds). This biases the
 comparison between distances. **Practical rule for later phases:** run at least 3d rounds, or
 report per-shot rates at a fixed number of rounds, before quoting a threshold.
+
+## Phase 2: BP-OSD and the [[144,12,12]] gross code, code-capacity noise
+
+**Noise model (code capacity).** Each data qubit independently gets an X error with probability p,
+and syndrome measurement is perfect. X errors are detected by the Z-type checks, so the syndrome is
+s = H_Z e. A shot fails if the residual r = e ⊕ ê flips **any** logical operator (lz · r ≠ 0 for any
+Z logical). The Z logicals are computed from the matrices as a basis of ker(H_X) modulo
+rowspace(H_Z). This phase does **not** model measurement errors or circuit-level noise. Bravyi et
+al. model both, so none of the numbers below are directly comparable with theirs. (There are no
+syndrome-extraction rounds here, so the Phase 1 rule of ≥ 3d rounds doesn't apply.)
+
+### Codes (`src/qec_bench/codes.py`)
+
+- **Rotated surface code**, d = 3, 5, 7, 9, 11: a d×d data grid, weight-4 bulk plaquettes, and
+  weight-2 boundary plaquettes (X type on the top and bottom edges, Z type on the left and right).
+- **Gross code**, from Bravyi et al., *High-threshold and low-overhead fault-tolerant quantum memory*,
+  Nature 627, 778 (2024), [arXiv:2308.07915](https://arxiv.org/abs/2308.07915). Built from Sec. 4,
+  Eq. (1): x = S_ℓ⊗I_m, y = I_ℓ⊗S_m, and Eq. (2): H_X = [A|B], H_Z = [Bᵀ|Aᵀ]. Parameters are
+  from Table 3: ℓ = 12, m = 6, A = x³ + y + y², B = y³ + x + x². (Equation and table numbers refer
+  to the arXiv version.)
+
+| Check (`tests/test_codes.py`) | Type | Result |
+|---|---|---|
+| H_X H_Zᵀ = 0 (mod 2), all codes | definition | pass |
+| Gross: n = 144, k = n − rank H_X − rank H_Z = 12 | known value (Table 3) | pass |
+| Surface: n = d², k = 1 (d = 3…11) | known value | pass |
+| Gross: every row of H_X and H_Z has weight 6 (every column has weight 3) | definition | pass |
+| Logical bases: commute with the opposite checks, lx·lzᵀ = I, independent of the stabilizers | consistency | pass |
+| Gross: an X logical of weight 12 found by a BP-OSD-CS search | upper-bound witness | pass: **d_X ≤ 12** (d = 12 is *not* proven here) |
+| Surface d = 3: brute force over all 2⁹ X errors gives minimum logical weight 3 | known value | pass |
+| Surface d = 5: weight-5 witness, plus MWPM corrects every error of weight ≤ 2 | upper + lower bound | pass: d_X = 5 |
+
+### Decoders (`src/qec_bench/decoding.py`)
+
+Both decoders work on H_Z, and on identical syndromes for all shots they both process.
+
+- **PyMatching**: `Matching.from_check_matrix(H_Z)` with uniform weights. For iid noise this is
+  exact minimum-weight decoding.
+- **BP-OSD**: `ldpc` 2.4.1 `BpOsdDecoder`. These settings were fixed before any sweep ran and were
+  not tuned afterwards:
+
+  | setting | value |
+  |---|---|
+  | prior `error_rate` | the true p |
+  | `bp_method` | `minimum_sum` |
+  | `ms_scaling_factor` | 0.625 |
+  | `max_iter` | 1000 |
+  | `schedule` | `parallel` |
+  | `osd_method` | `osd_cs` (combination sweep) |
+  | `osd_order` | 7 |
+
+| Check (`tests/test_code_capacity.py`) | Type | Result |
+|---|---|---|
+| p = 0: no syndromes and no failures, both decoders | analytic limit | pass |
+| Every correction reproduces the syndrome | consistency | pass |
+| MWPM corrects every error of weight ≤ ⌊(d−1)/2⌋, exhaustively (d = 3, 5) | guaranteed by distance | pass |
+| BP-OSD corrects every single-qubit error (surface d = 3, 5; gross) | sanity | pass |
+| p = 1/2 gives P(fail) = 1 − 2⁻ᵏ (surface d = 5: 1/2; gross: 1 − 2⁻¹²), within ±4σ | analytic limit | pass |
+| Surface d = 5, p = 0.05, identical syndromes: MWPM 0.0231 vs BP-OSD 0.0233 | cross-check | pass (both well below 1/2) |
+
+### Experiment 1: surface-code code-capacity threshold
+
+**Settings.** d = 3…11, and p = 0.050, 0.055, …, 0.130 (17 evenly spaced points). MWPM stops at
+2,000 errors or 10⁶ shots. BP-OSD gets a smaller budget, 500 errors or 2×10⁵ shots, because only the
+MWPM crossing is pre-registered. No point hit its shot cap. Crossings use the Phase 1 estimator
+(first sign change of log(p_L,large / p_L,small), interpolated in log p) on per-shot rates. The 95%
+intervals come from the same binomial parametric bootstrap as Phase 1.
+
+**Reference.** Wang, Harrington & Preskill, *Confinement-Higgs transition in a disordered gauge
+theory and the accuracy threshold for quantum memory*, Ann. Phys. 303, 31 (2003),
+[arXiv:quant-ph/0207088](https://arxiv.org/abs/quant-ph/0207088), abstract. They report
+p_c0 = 0.1031 ± 0.0001 as the T = 0 critical point of the 2D random-bond Ising model, which they
+identify with the threshold of minimum-weight decoding for independent bit flips with perfect
+measurement. This is a statistical-mechanics critical point that they identify with the decoder
+threshold, not a direct MWPM simulation. It is for the toric code, whose asymptotic threshold the
+planar code shares, though their finite-size crossings can differ. For context, the optimal
+(maximum-likelihood) threshold for the same noise is 0.1093 (Honecker, Picco & Pujol,
+PRL 87, 047201 (2001), as quoted in Watson & Barrett, NJP 16, 093045 (2014)).
+
+**Pre-registered criterion** (fixed before the sweep): the MWPM (9, 11) per-shot crossing point
+estimate lies in **9%–11%**. The largest pair decides because boundary effects shift the
+small-d crossings.
+
+| Decoder | (3,5) | (5,7) | (7,9) | (9,11) | (9,11) bootstrap 95% |
+|---|---|---|---|---|---|
+| MWPM | 9.13% | 9.84% (also 10.51%) | 10.08% | **9.41%** (also 10.61%) | [8.81%, 10.17%] |
+| BP-OSD | 8.64% (also 10.08%) | 7.93% (also 9.36%) | 8.97% (also 9.79%) | 9.71% (also 10.63%, 11.53%) | [6.98%, 10.64%] |
+
+"Also" lists later sign changes. The estimator reports the first one.
+
+![Code-capacity threshold](results/cc_surface_threshold.png)
+
+**Result: pass.** The MWPM (9, 11) crossing is 9.41%, inside the band. Two caveats:
+
+- **The crossing is only loosely located.** Near threshold the curves are nearly parallel and
+  close together, so with ~2,000 errors per point (about ±2%) several pairs change sign twice. The
+  (9, 11) bootstrap interval is about 1.4 points wide. The band is satisfied, but this sweep can't
+  tell 9.4% from 10.3%.
+- **BP-OSD tracks MWPM closely on the surface code.** Its curves lie on top of MWPM's, both by eye
+  and in the error counts on identical syndromes. BP-OSD's crossings are noisier still, because of
+  its 4× smaller error budget. No BP-OSD criterion was set (I had no verified literature value), so
+  this is report-only.
+
+### Experiment 2: gross code vs 12 surface-code copies
+
+**Setup.** The gross code encodes 12 logical qubits, so it is compared with **12 independent
+surface-code patches** of distance d, not with one patch. Both sides use the same metric:
+P(any of the 12 logical qubits fails) per shot.
+- **Gross code:** decoded with BP-OSD; a shot fails if any of its 12 logicals flips. Measured directly.
+- **12 surface patches:** decoded with MWPM. P₁₂ = 1 − (1 − p_L)¹², where p_L is one patch's
+  measured failure rate. This is exact, not an approximation, because the patches share no qubits
+  and the noise is iid.
+
+p = 2%, 3%, …, 8%, with 200 errors or 10⁶ shots per point. Surface d = 9 and 11 at p = 2% hit the
+shot cap with 168 and 47 errors. They are measured rates with wider error bars, not upper bounds.
+The matched distance d* comes from interpolating log P₁₂ linearly in d to the gross code's rate.
+Qubit counts are reported both ways: data only (12·d*² vs 144), and total including one check
+qubit per stabilizer (12·(2d*² − 1) vs 144 + 144 = 288). d* is never extrapolated beyond d = 11.
+Its interval comes from a binomial parametric bootstrap over all counts.
+
+| p | P_gross (BP-OSD) | Matched d* [95%] | 12 surface patches: data / total qubits | Gross: data / total |
+|---|---|---|---|---|
+| 2% | 9.4e-4 ± 0.7e-4 | 10.19 [9.85, 10.57] | **1,246 / 2,480** | 144 / 288 |
+| 3% | 3.1e-3 | > 11 | > 1,452 / > 2,892 | 144 / 288 |
+| 4% | 1.05e-2 | > 11 | > 1,452 / > 2,892 | 144 / 288 |
+| 5% | 4.1e-2 | > 11 | > 1,452 / > 2,892 | 144 / 288 |
+| 6%–8% | 0.096–0.30 | > 11 | > 1,452 / > 2,892 | 144 / 288 |
+
+Using BP-OSD instead of MWPM for the surface patches changes d* by less than 0.01.
+
+![Gross vs 12 surface patches](results/cc_gross_vs_surface.png)
+
+**What this shows, and what it doesn't:**
+- At p = 2%, one gross code matches 12 surface patches of d ≈ 10.2. That is about **8.7× fewer
+  data qubits** (1,246 vs 144) and **8.6× fewer total qubits** (2,480 vs 288). At p = 3–8%, the
+  gross code beats even 12 patches of d = 11, so the saving there is larger, but only a lower
+  bound is known.
+- **The advantage shrinks as p falls.** Between p = 2% and 4%, the gross code's log-log slope is
+  3.44, against 5.52 for surface d = 11. (Slopes are report-only. Surface d = 3…11: 2.02, 2.59,
+  3.65, 4.63, 5.52, against ⌈d/2⌉ = 2…6.) The gross code is far from its asymptotic p^⌈12/2⌉ =
+  p⁶ regime at these p, presumably because many more failure configurations fit into 144 qubits,
+  and possibly also because of BP-OSD's sub-optimality. That explanation is not tested here. The
+  d = 11 curve crosses the gross curve between 2% and 3%, so at p < 2% the matched d* would
+  probably be > 10.2, but these data do not show it. Nothing is extrapolated below 2%.
+- **Not comparable with Bravyi et al.'s "nearly 3000 physical qubits".** Their comparison uses
+  circuit-level noise (with measurement errors) at a much lower physical error rate, and the
+  gross code's syndrome-extraction circuit. This is code capacity only.
+- There is no pass/fail criterion here, because I have no cited code-capacity reference value for
+  the gross code. The only sanity check, P_gross decreasing as p falls, holds.
+
+### Experiment 3: decoder timing
+
+Single process, 10⁴ shots, median of 5 repeats, decode time only (sampling and construction
+excluded). "Per-shot call" calls `decode()` once per shot for both decoders, so both pay the same
+Python overhead. "decode_batch" is PyMatching's realistic usage. BP-OSD in `ldpc` 2.4.1 has no batch API.
+
+| Code (n) | p | BP-OSD, per-shot call | PyMatching, per-shot call | PyMatching, decode_batch (per shot) |
+|---|---|---|---|---|
+| surface d=3 (9) | 0.05 | 11 µs | 4.1 µs | 0.08 µs |
+| surface d=7 (49) | 0.05 | 217 µs | 5.0 µs | 0.73 µs |
+| surface d=11 (121) | 0.05 | 807 µs | 6.8 µs | 2.6 µs |
+| gross (144) | 0.05 | 293 µs | — | — |
+| surface d=11 (121) | 0.10 | 1,053 µs | 11.8 µs | 6.7 µs |
+| gross (144) | 0.10 | 1,676 µs | — | — |
+
+![Decoder timing](results/decoder_timing.png)
+
+- On the surface code, BP-OSD is about 3–120× slower than PyMatching's per-shot call (growing with
+  d), and about 300× slower than its batch mode at d = 11.
+- BP-OSD is *faster* on the gross code (n = 144) than on surface d = 11 (n = 121) at p = 5%. The
+  measured reason: BP alone converges on 86% of gross-code shots but on only 20% of surface d = 11
+  shots (2,000 shots each, p = 0.05). The expensive OSD step runs only when BP fails. That BP
+  struggles because of the surface code's degenerate, short-cycle Tanner graph is an interpretation,
+  not tested here. At p = 10%, BP converges on only 20% of gross shots (2% for surface d = 11), and
+  the gross code becomes the slowest.
+
+## Findings (Phase 2)
+
+1. **Both codes pass their construction checks.** The gross code built from Bravyi et al. Table 3
+   has n = 144, k = 12 (from ranks) and weight-6 checks, and a weight-12 logical exists (d ≤ 12;
+   not proven to equal 12).
+2. **The pre-registered MWPM threshold check passes**: the (9, 11) crossing is 9.41% (bootstrap 95%
+   [8.81%, 10.17%]), inside 9–11%, against the 10.31% random-bond Ising value. The crossing is only
+   loosely located.
+3. **On the surface code, BP-OSD (OSD-CS, order 7) performs essentially the same as MWPM** on
+   identical syndromes, at about 120× the per-call decode time at d = 11.
+4. **Under code capacity at p = 2%, the gross code saves about 8.6–8.7× in qubits** over 12
+   surface patches with the same any-logical failure rate (1,246 vs 144 data; 2,480 vs 288 total).
+   The saving is larger at higher p (beyond d = 11, so only a lower bound), and shrinks as p falls.
+   This leaves out measurement errors and circuit-level noise, which Bravyi et al. do model.
