@@ -243,12 +243,15 @@ small-d crossings.
 
 ![Code-capacity threshold](results/cc_surface_threshold.png)
 
-**Result: pass.** The MWPM (9, 11) crossing is 9.41%, inside the band. Two caveats:
+**Result: pass.** The MWPM (9, 11) crossing is 9.41%, inside the band. Caveats:
 
 - **The crossing is only loosely located.** Near threshold the curves are nearly parallel and
   close together, so with ~2,000 errors per point (about ±2%) several pairs change sign twice. The
-  (9, 11) bootstrap interval is about 1.4 points wide. The band is satisfied, but this sweep can't
-  tell 9.4% from 10.3%.
+  (9, 11) bootstrap interval is about 1.4 points wide.
+- **The crossing sits slightly below the reference.** The (9, 11) bootstrap interval [8.81%, 10.17%]
+  does not contain the 10.31% reference value. Two likely causes, both untested: finite-size and
+  boundary effects of the planar code at d ≤ 11, and curves that are nearly parallel and cross
+  more than once. Larger distances (d = 13, 15) would test this. They have not been run.
 - **BP-OSD tracks MWPM closely on the surface code.** Its curves lie on top of MWPM's, both by eye
   and in the error counts on identical syndromes. BP-OSD's crossings are noisier still, because of
   its 4× smaller error budget. No BP-OSD criterion was set (I had no verified literature value), so
@@ -334,10 +337,15 @@ Python overhead. "decode_batch" is PyMatching's realistic usage. BP-OSD in `ldpc
    not proven to equal 12).
 2. **The pre-registered MWPM threshold check passes**: the (9, 11) crossing is 9.41% (bootstrap 95%
    [8.81%, 10.17%]), inside 9–11%, against the 10.31% random-bond Ising value. The crossing is only
-   loosely located.
+   loosely located, and the interval does not contain 10.31%, so it sits slightly below the
+   reference. Two likely causes, both untested: finite-size and boundary effects of the planar code
+   at d ≤ 11, and nearly parallel curves that cross more than once. Larger distances (d = 13, 15)
+   would test this. They have not been run.
 3. **On the surface code, BP-OSD (OSD-CS, order 7) performs essentially the same as MWPM** on
    identical syndromes, at about 120× the per-call decode time at d = 11.
 4. **Under code capacity at p = 2%, the gross code saves about 8.6–8.7× in qubits** over 12
    surface patches with the same any-logical failure rate (1,246 vs 144 data; 2,480 vs 288 total).
    The saving is larger at higher p (beyond d = 11, so only a lower bound), and shrinks as p falls.
-   This leaves out measurement errors and circuit-level noise, which Bravyi et al. do model.
+   This leaves out measurement errors and circuit-level noise, which Bravyi et al. do model. The
+   saving is consistent in size with their ~10× (288 vs ~3,000 physical qubits, circuit-level), but
+   this is a code-capacity result and not a reproduction of theirs.
