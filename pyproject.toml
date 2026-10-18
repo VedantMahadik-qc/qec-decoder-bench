@@ -13,6 +13,7 @@ dependencies = [
     "sinter>=1.14",
     "numpy>=1.26",
     "matplotlib>=3.8",
+    "ldpc>=2.4",
 ]
 
 [project.optional-dependencies]
