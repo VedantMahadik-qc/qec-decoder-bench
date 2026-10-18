@@ -2,6 +2,7 @@
 
     python scripts/plot_code_capacity.py threshold
     python scripts/plot_code_capacity.py gross
+    python scripts/plot_code_capacity.py timing
 """
 
 import math
@@ -65,5 +66,30 @@ def plot_gross() -> None:
     fig.savefig(RESULTS / "cc_gross_vs_surface.png", dpi=150)
 
 
+def plot_timing() -> None:
+    """Median decode time per shot vs number of data qubits n, one panel per p."""
+    rows = read_rows(RESULTS / "decoder_timing.csv")
+    ps = sorted({float(r["p"]) for r in rows})
+    fig, axes = plt.subplots(1, len(ps), figsize=(6 * len(ps), 5), sharey=True)
+    for ax, p in zip(axes, ps):
+        for method in dict.fromkeys(r["method"] for r in rows):
+            for code, marker in (("surface", "o"), ("gross", "*")):
+                pts = sorted((int(r["n"]), float(r["median_us_per_shot"])) for r in rows
+                             if float(r["p"]) == p and r["method"] == method and r["code"] == code)
+                if pts:
+                    ns, us = zip(*pts)
+                    ax.plot(ns, us, marker=marker, ms=10 if code == "gross" else 4,
+                            ls="-" if code == "surface" else "none",
+                            label=f"{method}, {code}")
+        ax.set_yscale("log")
+        ax.set_xlabel("data qubits n (surface d=3..11; gross n=144)")
+        ax.set_title(f"Decode time per shot, single process, p = {p}")
+        ax.grid(which="both", alpha=0.3)
+        ax.legend(fontsize=8)
+    axes[0].set_ylabel("median time per shot (us)")
+    fig.tight_layout()
+    fig.savefig(RESULTS / "decoder_timing.png", dpi=150)
+
+
 if __name__ == "__main__":
-    {"threshold": plot_threshold, "gross": plot_gross}[sys.argv[1]]()
+    {"threshold": plot_threshold, "gross": plot_gross, "timing": plot_timing}[sys.argv[1]]()

@@ -1,0 +1,33 @@
+code,d,n,p,method,shots,repeats,median_us_per_shot
+surface,3,9,0.05,BP-OSD (per-shot call),10000,5,11.085
+surface,3,9,0.05,PyMatching (per-shot call),10000,5,4.081
+surface,3,9,0.05,"PyMatching (decode_batch, per shot)",10000,5,0.076
+surface,5,25,0.05,BP-OSD (per-shot call),10000,5,74.266
+surface,5,25,0.05,PyMatching (per-shot call),10000,5,4.265
+surface,5,25,0.05,"PyMatching (decode_batch, per shot)",10000,5,0.277
+surface,7,49,0.05,BP-OSD (per-shot call),10000,5,217.152
+surface,7,49,0.05,PyMatching (per-shot call),10000,5,4.996
+surface,7,49,0.05,"PyMatching (decode_batch, per shot)",10000,5,0.733
+surface,9,81,0.05,BP-OSD (per-shot call),10000,5,452.017
+surface,9,81,0.05,PyMatching (per-shot call),10000,5,5.8
+surface,9,81,0.05,"PyMatching (decode_batch, per shot)",10000,5,1.568
+surface,11,121,0.05,BP-OSD (per-shot call),10000,5,806.64
+surface,11,121,0.05,PyMatching (per-shot call),10000,5,6.821
+surface,11,121,0.05,"PyMatching (decode_batch, per shot)",10000,5,2.574
+gross,12,144,0.05,BP-OSD (per-shot call),10000,5,293.329
+surface,3,9,0.1,BP-OSD (per-shot call),10000,5,18.079
+surface,3,9,0.1,PyMatching (per-shot call),10000,5,4.151
+surface,3,9,0.1,"PyMatching (decode_batch, per shot)",10000,5,0.126
+surface,5,25,0.1,BP-OSD (per-shot call),10000,5,124.848
+surface,5,25,0.1,PyMatching (per-shot call),10000,5,5.463
+surface,5,25,0.1,"PyMatching (decode_batch, per shot)",10000,5,0.7
+surface,7,49,0.1,BP-OSD (per-shot call),10000,5,348.458
+surface,7,49,0.1,PyMatching (per-shot call),10000,5,6.328
+surface,7,49,0.1,"PyMatching (decode_batch, per shot)",10000,5,1.718
+surface,9,81,0.1,BP-OSD (per-shot call),10000,5,645.563
+surface,9,81,0.1,PyMatching (per-shot call),10000,5,8.758
+surface,9,81,0.1,"PyMatching (decode_batch, per shot)",10000,5,4.19
+surface,11,121,0.1,BP-OSD (per-shot call),10000,5,1052.739
+surface,11,121,0.1,PyMatching (per-shot call),10000,5,11.759
+surface,11,121,0.1,"PyMatching (decode_batch, per shot)",10000,5,6.702
+gross,12,144,0.1,BP-OSD (per-shot call),10000,5,1676.005
