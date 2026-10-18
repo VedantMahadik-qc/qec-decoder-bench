@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+build/
+dist/
+
+# Results: plots are regenerated from CSVs; only the final sweep CSVs are committed.
+*.png
+*.csv
+!results/surface_sweep.csv
+!results/notebook_replication.csv
+results/scratch/
