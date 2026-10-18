@@ -14,14 +14,32 @@ from pathlib import Path
 import numpy as np
 
 from qec_bench.codes import CSSCode, gross_code, logical_operators, rotated_surface_code
-from qec_bench.decoding import decode_all, logical_failures, make_bposd, make_mwpm, sample_code_capacity
+from qec_bench.decoding import (
+    Decoder,
+    decode_all,
+    logical_failures,
+    make_bposd,
+    make_mwpm,
+    sample_code_capacity,
+)
 
 SURFACE_DISTANCES = (3, 5, 7, 9, 11)
 THRESHOLD_PS = tuple(round(0.05 + 0.005 * i, 3) for i in range(17))  # 0.050 ... 0.130
 GROSS_PS = (0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08)
 
-CSV_FIELDS = ["code", "d", "n", "k", "p", "decoder", "shots", "errors", "decode_seconds",
-              "seed", "hit_shot_cap"]
+CSV_FIELDS = [
+    "code",
+    "d",
+    "n",
+    "k",
+    "p",
+    "decoder",
+    "shots",
+    "errors",
+    "decode_seconds",
+    "seed",
+    "hit_shot_cap",
+]
 
 
 @dataclass(frozen=True)
@@ -50,7 +68,7 @@ def task_seed(code_name: str, d: int, p: float, base: int = 2024) -> int:
     return int(np.random.SeedSequence([base, tag, d, round(p * 1e6)]).generate_state(1)[0])
 
 
-def _make_decoder(name: str, code: CSSCode, p: float):
+def _make_decoder(name: str, code: CSSCode, p: float) -> Decoder:
     return make_mwpm(code) if name == "mwpm" else make_bposd(code, p)
 
 
@@ -80,9 +98,16 @@ def run_task(task: CCTask) -> list[dict]:
 
     return [
         {
-            "code": task.code_name, "d": task.d, "n": code.n, "k": code.k, "p": task.p,
-            "decoder": name, "shots": t["shots"], "errors": t["errors"],
-            "decode_seconds": round(t["seconds"], 4), "seed": task.seed,
+            "code": task.code_name,
+            "d": task.d,
+            "n": code.n,
+            "k": code.k,
+            "p": task.p,
+            "decoder": name,
+            "shots": t["shots"],
+            "errors": t["errors"],
+            "decode_seconds": round(t["seconds"], 4),
+            "seed": task.seed,
             "hit_shot_cap": t["errors"] < budgets[name].max_errors,
         }
         for name, t in tally.items()
@@ -100,11 +125,19 @@ def threshold_tasks(mwpm: Budget, bposd: Budget, batch: int = 1000) -> list[CCTa
 
 def gross_comparison_tasks(surface: Budget, gross: Budget, batch: int = 1000) -> list[CCTask]:
     """Gross code with BP-OSD; surface d = 3..11 with MWPM (and BP-OSD for reference)."""
-    tasks = [CCTask("gross", 12, p, (("bposd", gross),), task_seed("gross", 12, p), batch)
-             for p in GROSS_PS]
+    tasks = [
+        CCTask("gross", 12, p, (("bposd", gross),), task_seed("gross", 12, p), batch)
+        for p in GROSS_PS
+    ]
     tasks += [
-        CCTask("surface", d, p, (("mwpm", surface), ("bposd", surface)),
-               task_seed("surface", d, p), batch)
+        CCTask(
+            "surface",
+            d,
+            p,
+            (("mwpm", surface), ("bposd", surface)),
+            task_seed("surface", d, p),
+            batch,
+        )
         for d in SURFACE_DISTANCES
         for p in GROSS_PS
     ]
@@ -131,8 +164,11 @@ def run_tasks(tasks: list[CCTask], csv_path: Path, workers: int) -> list[dict]:
             f.flush()
             rows += task_rows
             summary = ", ".join(f"{r['decoder']} {r['errors']}/{r['shots']}" for r in task_rows)
-            print(f"[{i}/{len(todo)}] {task_rows[0]['code']} d={task_rows[0]['d']} "
-                  f"p={task_rows[0]['p']}: {summary}", flush=True)
+            print(
+                f"[{i}/{len(todo)}] {task_rows[0]['code']} d={task_rows[0]['d']} "
+                f"p={task_rows[0]['p']}: {summary}",
+                flush=True,
+            )
     return rows
 
 
@@ -157,8 +193,11 @@ def estimate_seconds(smoke_rows: list[dict], tasks: list[CCTask], workers: int) 
             r = smoke[(task.code_name, task.d, task.p, name)]
             shots, errors = int(r["shots"]), int(r["errors"])
             per_shot = float(r["decode_seconds"]) / shots
-            needed = budget.max_shots if errors == 0 else min(
-                budget.max_shots, budget.max_errors * shots / errors)
+            needed = (
+                budget.max_shots
+                if errors == 0
+                else min(budget.max_shots, budget.max_errors * shots / errors)
+            )
             total += per_shot * needed
     return total / workers
 
@@ -188,7 +227,16 @@ def time_decoders(code_name: str, d: int, p: float, shots: int, repeats: int) ->
             start = time.perf_counter()
             run()
             times.append(time.perf_counter() - start)
-        rows.append({"code": code_name, "d": d, "n": code.n, "p": p, "method": method,
-                     "shots": shots, "repeats": repeats,
-                     "median_us_per_shot": round(float(np.median(times)) / shots * 1e6, 3)})
+        rows.append(
+            {
+                "code": code_name,
+                "d": d,
+                "n": code.n,
+                "p": p,
+                "method": method,
+                "shots": shots,
+                "repeats": repeats,
+                "median_us_per_shot": round(float(np.median(times)) / shots * 1e6, 3),
+            }
+        )
     return rows

@@ -46,8 +46,10 @@ def run_surface(args: argparse.Namespace) -> int:
     circuit = surface_code_memory_z(args.d, args.p, rounds=rounds)
     errors = count_logical_errors(circuit, shots=args.shots, seed=args.seed)
     per_round = sinter.shot_error_rate_to_piece_error_rate(errors / args.shots, pieces=rounds)
-    print(f"surface code, circuit-level noise: d={args.d} p={args.p} rounds={rounds} "
-          f"shots={args.shots} seed={args.seed}")
+    print(
+        f"surface code, circuit-level noise: d={args.d} p={args.p} rounds={rounds} "
+        f"shots={args.shots} seed={args.seed}"
+    )
     print(f"logical error rate per shot:  {format_rate(errors, args.shots)}")
     print(f"logical error rate per round: {per_round:.4e}  (sinter piece-rate conversion)")
     return 0
@@ -57,22 +59,29 @@ def run_codecap(args: argparse.Namespace) -> int:
     """One code-capacity point, via the same run_task that produced the committed CSVs."""
     if args.code == "gross":
         if args.decoder == "mwpm":
-            print("error: the gross code cannot be decoded with MWPM: each qubit sits in 3 Z "
-                  "checks, so errors are not graphlike. Use --decoder bposd.", file=sys.stderr)
+            print(
+                "error: the gross code cannot be decoded with MWPM: each qubit sits in 3 Z "
+                "checks, so errors are not graphlike. Use --decoder bposd.",
+                file=sys.stderr,
+            )
             return 2
         if args.d not in (None, GROSS_DISTANCE):
-            print(f"error: the gross code has fixed d = {GROSS_DISTANCE}; omit --d.",
-                  file=sys.stderr)
+            print(
+                f"error: the gross code has fixed d = {GROSS_DISTANCE}; omit --d.", file=sys.stderr
+            )
             return 2
     d = GROSS_DISTANCE if args.code == "gross" else (args.d if args.d is not None else 5)
     seed = args.seed if args.seed is not None else task_seed(args.code, d, args.p)
     # max_errors above max_shots, so only the shot budget stops the run.
     budget = Budget(max_shots=args.shots, max_errors=args.shots + 1)
-    task = CCTask(args.code, d, args.p, ((args.decoder, budget),), seed,
-                  batch=min(1000, args.shots))
+    task = CCTask(
+        args.code, d, args.p, ((args.decoder, budget),), seed, batch=min(1000, args.shots)
+    )
     (row,) = run_task(task)
-    print(f"{args.code} code (n={row['n']}, k={row['k']}, d={d}), code-capacity X noise: "
-          f"p={args.p} decoder={args.decoder} seed={seed}")
+    print(
+        f"{args.code} code (n={row['n']}, k={row['k']}, d={d}), code-capacity X noise: "
+        f"p={args.p} decoder={args.decoder} seed={seed}"
+    )
     print(f"P(any logical fails) per shot: {format_rate(row['errors'], row['shots'])}")
     return 0
 
@@ -108,8 +117,9 @@ def run_reproduce(args: argparse.Namespace) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="qec-bench", description=__doc__,
-                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        prog="qec-bench", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     sub = parser.add_subparsers(dest="command", required=True)
 
     surface = sub.add_parser("surface", help="one circuit-level surface-code point")
@@ -126,14 +136,19 @@ def build_parser() -> argparse.ArgumentParser:
     codecap.add_argument("--p", type=float, required=True, help="iid X error rate per qubit")
     codecap.add_argument("--decoder", choices=["mwpm", "bposd"], required=True)
     codecap.add_argument("--shots", type=int, required=True)
-    codecap.add_argument("--seed", type=int, default=None,
-                         help="default: the per-task seed used by the committed sweeps")
+    codecap.add_argument(
+        "--seed",
+        type=int,
+        default=None,
+        help="default: the per-task seed used by the committed sweeps",
+    )
     codecap.set_defaults(func=run_codecap)
 
     reproduce = sub.add_parser("reproduce", help="rebuild README plots/numbers from CSVs")
     reproduce.add_argument("phase", choices=["phase1", "phase2"])
-    reproduce.add_argument("--results", type=Path, default=Path("results"),
-                           help="directory holding the committed CSVs")
+    reproduce.add_argument(
+        "--results", type=Path, default=Path("results"), help="directory holding the committed CSVs"
+    )
     reproduce.add_argument("--out", type=Path, default=Path("results") / "reproduced")
     reproduce.set_defaults(func=run_reproduce)
     return parser

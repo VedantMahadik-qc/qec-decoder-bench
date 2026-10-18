@@ -26,6 +26,8 @@ def count_logical_errors(circuit: stim.Circuit, shots: int, seed: int) -> int:
 # Noise: iid X errors on data qubits, perfect syndrome measurement. X errors are seen
 # by the Z checks, so every decoder here works on H_Z and the syndrome s = H_Z e.
 
+Decoder = pymatching.Matching | BpOsdDecoder
+
 # BP-OSD settings, fixed before any sweep ran (not tuned to results).
 BPOSD_SETTINGS = {
     "bp_method": "minimum_sum",
@@ -56,7 +58,7 @@ def make_bposd(code: CSSCode, p: float) -> BpOsdDecoder:
     return BpOsdDecoder(code.hz, error_rate=p, **BPOSD_SETTINGS)
 
 
-def decode_all(decoder: pymatching.Matching | BpOsdDecoder, syndromes: np.ndarray) -> np.ndarray:
+def decode_all(decoder: Decoder, syndromes: np.ndarray) -> np.ndarray:
     """Corrections for a batch of syndromes, one row per shot, for either decoder type."""
     if isinstance(decoder, pymatching.Matching):
         return decoder.decode_batch(syndromes).astype(np.uint8)

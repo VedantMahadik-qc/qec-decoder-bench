@@ -92,10 +92,7 @@ def rotated_surface_code(d: int) -> CSSCode:
     for i in range(d + 1):
         for j in range(d + 1):
             qubits = [
-                r * d + c
-                for r in (i - 1, i)
-                for c in (j - 1, j)
-                if 0 <= r < d and 0 <= c < d
+                r * d + c for r in (i - 1, i) for c in (j - 1, j) if 0 <= r < d and 0 <= c < d
             ]
             is_x = (i + j) % 2 == 0
             on_top_bottom = i in (0, d) and 0 < j < d
@@ -114,7 +111,11 @@ def _cyclic_shift(size: int) -> np.ndarray:
 
 
 def bivariate_bicycle_code(
-    l: int, m: int, a_terms: list[tuple[int, int]], b_terms: list[tuple[int, int]], name: str
+    l: int,  # noqa: E741 -- the paper's symbol (ell); renaming would change the keyword API
+    m: int,
+    a_terms: list[tuple[int, int]],
+    b_terms: list[tuple[int, int]],
+    name: str,
 ) -> CSSCode:
     """Bivariate bicycle code, Bravyi et al., arXiv:2308.07915 (Nature 627, 778 (2024)).
 

@@ -1,9 +1,9 @@
 """Run the Phase 2 code-capacity experiments.
 
-    python scripts/run_code_capacity.py --exp threshold --smoke   # timed smoke run + estimate
-    python scripts/run_code_capacity.py --exp threshold
-    python scripts/run_code_capacity.py --exp gross [--smoke]
-    python scripts/run_code_capacity.py --exp timing
+python scripts/run_code_capacity.py --exp threshold --smoke   # timed smoke run + estimate
+python scripts/run_code_capacity.py --exp threshold
+python scripts/run_code_capacity.py --exp gross [--smoke]
+python scripts/run_code_capacity.py --exp timing
 """
 
 import argparse
@@ -54,8 +54,10 @@ def run_smoke(exp: str, workers: int) -> None:
     rows = run_tasks(smoke, scratch, workers)
     print(f"smoke run: {time.perf_counter() - start:.0f} s wall")
     est = estimate_seconds(rows, tasks, workers)
-    print(f"estimated full run for {out.name}: {est / 60:.0f} min on {workers} workers "
-          "(decode time only, assumes even load)")
+    print(
+        f"estimated full run for {out.name}: {est / 60:.0f} min on {workers} workers "
+        "(decode time only, assumes even load)"
+    )
 
 
 def run_timing() -> None:

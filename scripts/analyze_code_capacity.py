@@ -1,7 +1,7 @@
 """Print the Phase 2 numbers quoted in the README, recomputed from the committed CSVs.
 
-    python scripts/analyze_code_capacity.py threshold
-    python scripts/analyze_code_capacity.py gross
+python scripts/analyze_code_capacity.py threshold
+python scripts/analyze_code_capacity.py gross
 """
 
 import sys

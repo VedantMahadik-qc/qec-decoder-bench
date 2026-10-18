@@ -24,7 +24,9 @@ def _plot_panel(ax: plt.Axes, stats: list[sinter.TaskStats], per_round: bool) ->
         stats=stats,
         x_func=lambda s: s.json_metadata["p"],
         group_func=lambda s: f"d={s.json_metadata['d']}",
-        failure_units_per_shot_func=(lambda s: s.json_metadata["r"]) if per_round else (lambda s: 1),
+        failure_units_per_shot_func=(lambda s: s.json_metadata["r"])
+        if per_round
+        else (lambda s: 1),
     )
     ax.set_xscale("log")
     ax.set_yscale("log")
@@ -87,13 +89,25 @@ def plot_gross_vs_surface(csv_path: Path, png_path: Path) -> None:
     """P(any of 12 logical qubits fails): one gross code vs 12 independent surface patches."""
     rows = read_rows(csv_path)
     fig, ax = plt.subplots(figsize=(7, 5))
-    _errorbar(ax, counts_by_p(rows, "gross", 12, "bposd"),
-              "gross [[144,12,12]], BP-OSD (144 data qubits)", color="black", lw=2)
+    _errorbar(
+        ax,
+        counts_by_p(rows, "gross", 12, "bposd"),
+        "gross [[144,12,12]], BP-OSD (144 data qubits)",
+        color="black",
+        lw=2,
+    )
     for d in SURFACE_DISTANCES:
         counts = counts_by_p(rows, "surface", d, "mwpm")
         ps = sorted(counts)
         p12 = [any_of_copies_fail(counts[p][1] / counts[p][0], 12) for p in ps]
-        ax.plot(ps, p12, marker="o", ms=3, ls="--", label=f"12 x surface d={d}, MWPM ({12 * d * d} data)")
+        ax.plot(
+            ps,
+            p12,
+            marker="o",
+            ms=3,
+            ls="--",
+            label=f"12 x surface d={d}, MWPM ({12 * d * d} data)",
+        )
     ax.set_xscale("log")
     ax.set_yscale("log")
     ax.set_xlabel("physical bit-flip rate p")
@@ -113,13 +127,21 @@ def plot_decoder_timing(csv_path: Path, png_path: Path) -> None:
     for ax, p in zip(axes, ps):
         for method in dict.fromkeys(r["method"] for r in rows):
             for code, marker in (("surface", "o"), ("gross", "*")):
-                pts = sorted((int(r["n"]), float(r["median_us_per_shot"])) for r in rows
-                             if float(r["p"]) == p and r["method"] == method and r["code"] == code)
+                pts = sorted(
+                    (int(r["n"]), float(r["median_us_per_shot"]))
+                    for r in rows
+                    if float(r["p"]) == p and r["method"] == method and r["code"] == code
+                )
                 if pts:
                     ns, us = zip(*pts)
-                    ax.plot(ns, us, marker=marker, ms=10 if code == "gross" else 4,
-                            ls="-" if code == "surface" else "none",
-                            label=f"{method}, {code}")
+                    ax.plot(
+                        ns,
+                        us,
+                        marker=marker,
+                        ms=10 if code == "gross" else 4,
+                        ls="-" if code == "surface" else "none",
+                        label=f"{method}, {code}",
+                    )
         ax.set_yscale("log")
         ax.set_xlabel("data qubits n (surface d=3..11; gross n=144)")
         ax.set_title(f"Decode time per shot, single process, p = {p}")

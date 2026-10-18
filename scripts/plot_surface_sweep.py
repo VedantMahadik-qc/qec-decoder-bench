@@ -1,6 +1,6 @@
 """Plot a surface-code sweep CSV and print the validation numbers.
 
-    python scripts/plot_surface_sweep.py results/surface_sweep.csv
+python scripts/plot_surface_sweep.py results/surface_sweep.csv
 """
 
 import argparse

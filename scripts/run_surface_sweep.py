@@ -1,8 +1,8 @@
 """Run the surface-code memory sweep with sinter.
 
-    python scripts/run_surface_sweep.py --sweep main
-    python scripts/run_surface_sweep.py --sweep replication
-    python scripts/run_surface_sweep.py --sweep followup
+python scripts/run_surface_sweep.py --sweep main
+python scripts/run_surface_sweep.py --sweep replication
+python scripts/run_surface_sweep.py --sweep followup
 """
 
 import argparse

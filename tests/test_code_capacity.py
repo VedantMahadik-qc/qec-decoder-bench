@@ -8,6 +8,7 @@ import pytest
 
 from qec_bench.codes import CSSCode, gross_code, logical_operators, rotated_surface_code
 from qec_bench.decoding import (
+    Decoder,
     decode_all,
     logical_failures,
     make_bposd,
@@ -20,7 +21,7 @@ def surface_and_gross() -> list[CSSCode]:
     return [rotated_surface_code(d) for d in (3, 5, 7)] + [gross_code()]
 
 
-def failure_count(code: CSSCode, decoder, errors: np.ndarray) -> int:
+def failure_count(code: CSSCode, decoder: Decoder, errors: np.ndarray) -> int:
     _lx, lz = logical_operators(code)
     syndromes = ((errors.astype(np.int64) @ code.hz.T) % 2).astype(np.uint8)
     return int(logical_failures(code, lz, errors, decode_all(decoder, syndromes)).sum())
@@ -67,8 +68,9 @@ def test_mwpm_corrects_every_error_up_to_half_distance(d: int) -> None:
     assert failure_count(code, make_mwpm(code), errors) == 0
 
 
-@pytest.mark.parametrize("code", [rotated_surface_code(3), rotated_surface_code(5), gross_code()],
-                         ids=lambda c: c.name)
+@pytest.mark.parametrize(
+    "code", [rotated_surface_code(3), rotated_surface_code(5), gross_code()], ids=lambda c: c.name
+)
 def test_bposd_corrects_every_single_qubit_error(code: CSSCode) -> None:
     errors = np.eye(code.n, dtype=np.uint8)
     assert failure_count(code, make_bposd(code, 0.01), errors) == 0
@@ -84,7 +86,7 @@ def test_maximal_noise_randomises_every_logical(code: CSSCode) -> None:
     # uniform over 2^k classes and P(any logical flipped) = 1 - 2^-k.
     shots = 4000
     errors, _ = sample_code_capacity(code, 0.5, shots, np.random.default_rng(2))
-    expected = 1 - 2.0 ** -code.k
+    expected = 1 - 2.0**-code.k
     sigma = math.sqrt(expected * (1 - expected) / shots)
     decoder = make_mwpm(code) if code.name.startswith("surface") else make_bposd(code, 0.49)
     rate = failure_count(code, decoder, errors) / shots

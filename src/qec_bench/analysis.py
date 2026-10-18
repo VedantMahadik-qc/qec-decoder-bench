@@ -18,9 +18,7 @@ def logical_error_rate(stat: sinter.TaskStats, per_round: bool) -> float:
     return sinter.shot_error_rate_to_piece_error_rate(shot_rate, pieces=stat.json_metadata["r"])
 
 
-def rates_by_p(
-    stats: list[sinter.TaskStats], d: int, per_round: bool
-) -> dict[float, float]:
+def rates_by_p(stats: list[sinter.TaskStats], d: int, per_round: bool) -> dict[float, float]:
     """Map p -> logical error rate for distance d, skipping points with zero errors."""
     return {
         s.json_metadata["p"]: logical_error_rate(s, per_round)
@@ -76,8 +74,11 @@ def bootstrap_crossings(
     """
     rng = np.random.default_rng(seed)
     points = {
-        d: [(s.json_metadata["p"], s.shots, s.errors, s.json_metadata["r"])
-            for s in stats if s.json_metadata["d"] == d]
+        d: [
+            (s.json_metadata["p"], s.shots, s.errors, s.json_metadata["r"])
+            for s in stats
+            if s.json_metadata["d"] == d
+        ]
         for d in (d_small, d_large)
     }
     results = np.full(n_boot, np.nan)
@@ -102,7 +103,10 @@ def rate_sigma(stat: sinter.TaskStats, per_round: bool) -> float:
 
 
 def ps_within_n_sigma(
-    stats: list[sinter.TaskStats], d_small: int, d_large: int, n_sigma: float = 2.0,
+    stats: list[sinter.TaskStats],
+    d_small: int,
+    d_large: int,
+    n_sigma: float = 2.0,
     per_round: bool = True,
 ) -> list[float]:
     """Shared p values where the two curves differ by less than n_sigma combined sigma."""
@@ -130,9 +134,7 @@ def fit_low_p_slope(
     points = [
         (s.json_metadata["p"], s.errors / s.shots)
         for s in stats
-        if s.json_metadata["d"] == d
-        and s.json_metadata["p"] <= p_max
-        and s.errors >= min_errors
+        if s.json_metadata["d"] == d and s.json_metadata["p"] <= p_max and s.errors >= min_errors
     ]
     if len(points) < 2:
         return None
@@ -157,8 +159,10 @@ def counts_by_p(rows: list[dict], code: str, d: int, decoder: str) -> Counts:
 
 def crossings_from_counts(small: Counts, large: Counts) -> list[float]:
     """Per-shot crossings, via the same estimator as Phase 1 (crossings_from_rates)."""
+
     def rates(c: Counts) -> dict[float, float]:
         return {p: k / n for p, (n, k) in c.items()}
+
     return crossings_from_rates(rates(small), rates(large))
 
 

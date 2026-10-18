@@ -49,7 +49,9 @@ def surface_sweep_numbers(stats: list[sinter.TaskStats]) -> dict:
         found = boot[~np.isnan(boot)]
         lo, med, hi = np.percentile(found, [2.5, 50, 97.5]) if found.size else (np.nan,) * 3
         numbers["bootstrap"][_pair_key(a, b)] = {
-            "median": float(med), "lo": float(lo), "hi": float(hi),
+            "median": float(med),
+            "lo": float(lo),
+            "hi": float(hi),
             "no_crossing_fraction": float(np.isnan(boot).mean()),
         }
         numbers["within_2sigma"][_pair_key(a, b)] = ps_within_n_sigma(stats, a, b, n_sigma=2.0)
@@ -114,8 +116,9 @@ def print_rounds_comparison(rows: list[dict]) -> None:
     for d in sorted({r["d"] for r in rows}):
         ratios = [r["ratio"] for r in rows if r["d"] == d]
         zs = [r["z"] for r in rows if r["d"] == d]
-        print(f"  d={d}: ratio {min(ratios):.2f}-{max(ratios):.2f}, "
-              f"z {min(zs):.1f} to {max(zs):.1f}")
+        print(
+            f"  d={d}: ratio {min(ratios):.2f}-{max(ratios):.2f}, z {min(zs):.1f} to {max(zs):.1f}"
+        )
 
 
 PHASE1_SWEEPS = {
@@ -180,14 +183,17 @@ def threshold_numbers(rows: list[dict]) -> dict:
 
 
 def print_threshold_report(numbers: dict) -> None:
-    print(f"{numbers['hit_shot_cap']} of {numbers['points']} (task, decoder) points "
-          "hit the shot cap")
+    print(
+        f"{numbers['hit_shot_cap']} of {numbers['points']} (task, decoder) points hit the shot cap"
+    )
     for decoder in DECODERS:
         print(f"\n{decoder}: adjacent-pair crossings (per shot)")
         for pair, c in numbers["crossings"][decoder].items():
             interval = f"[{c['lo']:.4f}, {c['hi']:.4f}]" if c["lo"] is not None else "n/a"
-            print(f"  ({pair}): {[round(x, 4) for x in c['points']]}  "
-                  f"bootstrap 95% {interval}, no-crossing {c['no_crossing_fraction']:.1%}")
+            print(
+                f"  ({pair}): {[round(x, 4) for x in c['points']]}  "
+                f"bootstrap 95% {interval}, no-crossing {c['no_crossing_fraction']:.1%}"
+            )
     pre = numbers["preregistered"]
     point = numbers["crossings"]["mwpm"]["9,11"]["points"]
     verdict = "PASS" if pre["pass"] else "FAIL"
@@ -232,16 +238,21 @@ def gross_numbers(rows: list[dict], n_boot: int = 2000) -> dict:
             entry = {
                 "gross_rate": k / n,
                 "gross_sigma": math.sqrt(k) / n,
-                "p12": {str(d): any_of_copies_fail(sk / sn, COPIES)
-                        for d, (sn, sk) in surface.items()},
+                "p12": {
+                    str(d): any_of_copies_fail(sk / sn, COPIES) for d, (sn, sk) in surface.items()
+                },
                 "d_star": d_star,
                 "out_of_range_fraction": 1 - len(ok) / n_boot,
             }
             if d_star is not None:
                 lo, hi = np.percentile(ok, [2.5, 97.5])
                 data, total = surface_qubits(d_star)
-                entry |= {"lo": float(lo), "hi": float(hi),
-                          "data_qubits": data, "total_qubits": total}
+                entry |= {
+                    "lo": float(lo),
+                    "hi": float(hi),
+                    "data_qubits": data,
+                    "total_qubits": total,
+                }
             numbers[decoder][str(p)] = entry
     return numbers
 
@@ -254,13 +265,17 @@ def print_gross_report(numbers: dict) -> None:
             rate = e["gross_rate"]
             if e["d_star"] is None:
                 side = "> d=11 (gross better)" if rate < e["p12"]["11"] else "< d=3 (gross worse)"
-                print(f"{float(p):.2f}   {rate:.3e}   d* {side}; P12(d=3..11) = "
-                      + ", ".join(f"{v:.2e}" for v in e["p12"].values()))
+                print(
+                    f"{float(p):.2f}   {rate:.3e}   d* {side}; P12(d=3..11) = "
+                    + ", ".join(f"{v:.2e}" for v in e["p12"].values())
+                )
                 continue
-            print(f"{float(p):.2f}   {rate:.3e} +/- {e['gross_sigma']:.1e}   "
-                  f"d* = {e['d_star']:.2f} [{e['lo']:.2f}, {e['hi']:.2f}]  -> "
-                  f"{e['data_qubits']:.0f} / {e['total_qubits']:.0f}"
-                  f"  (bootstrap out-of-range {e['out_of_range_fraction']:.1%})")
+            print(
+                f"{float(p):.2f}   {rate:.3e} +/- {e['gross_sigma']:.1e}   "
+                f"d* = {e['d_star']:.2f} [{e['lo']:.2f}, {e['hi']:.2f}]  -> "
+                f"{e['data_qubits']:.0f} / {e['total_qubits']:.0f}"
+                f"  (bootstrap out-of-range {e['out_of_range_fraction']:.1%})"
+            )
 
 
 SLOPE_PS = (0.02, 0.03, 0.04)
@@ -277,8 +292,10 @@ def gross_slope_numbers(rows: list[dict]) -> dict:
     """Per-shot log-log slopes over p = 2-4% (report only): gross BP-OSD, one surface patch MWPM."""
     return {
         "gross": _log_log_slope(counts_by_p(rows, "gross", 12, "bposd")),
-        "surface_mwpm": {str(d): _log_log_slope(counts_by_p(rows, "surface", d, "mwpm"))
-                         for d in SURFACE_DISTANCES},
+        "surface_mwpm": {
+            str(d): _log_log_slope(counts_by_p(rows, "surface", d, "mwpm"))
+            for d in SURFACE_DISTANCES
+        },
     }
 
 
@@ -289,8 +306,14 @@ def print_gross_slopes(numbers: dict) -> None:
 
 def timing_numbers(rows: list[dict]) -> list[dict]:
     return [
-        {"code": r["code"], "d": int(r["d"]), "n": int(r["n"]), "p": float(r["p"]),
-         "method": r["method"], "us_per_shot": float(r["median_us_per_shot"])}
+        {
+            "code": r["code"],
+            "d": int(r["d"]),
+            "n": int(r["n"]),
+            "p": float(r["p"]),
+            "method": r["method"],
+            "us_per_shot": float(r["median_us_per_shot"]),
+        }
         for r in rows
     ]
 
@@ -298,8 +321,9 @@ def timing_numbers(rows: list[dict]) -> list[dict]:
 def print_timing(rows: list[dict]) -> None:
     print("Median decode time per shot (us):")
     for r in rows:
-        print(f"  {r['code']} d={r['d']} (n={r['n']}) p={r['p']}: {r['method']}: "
-              f"{r['us_per_shot']}")
+        print(
+            f"  {r['code']} d={r['d']} (n={r['n']}) p={r['p']}: {r['method']}: {r['us_per_shot']}"
+        )
 
 
 def phase2_numbers(results_dir: Path) -> dict:
@@ -308,9 +332,15 @@ def phase2_numbers(results_dir: Path) -> dict:
         "threshold": threshold_numbers(read_rows(results_dir / "cc_surface_threshold.csv")),
         "gross": gross_numbers(gross_rows),
         "gross_shot_cap": [
-            {"d": int(r["d"]), "p": float(r["p"]), "decoder": r["decoder"],
-             "shots": int(r["shots"]), "errors": int(r["errors"])}
-            for r in gross_rows if r["hit_shot_cap"] == "True"
+            {
+                "d": int(r["d"]),
+                "p": float(r["p"]),
+                "decoder": r["decoder"],
+                "shots": int(r["shots"]),
+                "errors": int(r["errors"]),
+            }
+            for r in gross_rows
+            if r["hit_shot_cap"] == "True"
         ],
         "slopes": gross_slope_numbers(gross_rows),
         "timing": timing_numbers(read_rows(results_dir / "decoder_timing.csv")),
@@ -323,8 +353,10 @@ def print_phase2(numbers: dict) -> None:
     print("\n=== Experiment 2: gross code vs 12 surface-code copies")
     print_gross_report(numbers["gross"])
     for r in numbers["gross_shot_cap"]:
-        print(f"shot cap hit: {r['decoder']} surface d={r['d']} p={r['p']}: "
-              f"{r['errors']} errors in {r['shots']} shots")
+        print(
+            f"shot cap hit: {r['decoder']} surface d={r['d']} p={r['p']}: "
+            f"{r['errors']} errors in {r['shots']} shots"
+        )
     print_gross_slopes(numbers["slopes"])
     print("\n=== Experiment 3: decoder timing")
     print_timing(numbers["timing"])

@@ -41,8 +41,12 @@ def test_codecap_point_runs(args: list[str], capsys: pytest.CaptureFixture[str])
 
 
 def test_codecap_rejects_gross_with_mwpm(capsys: pytest.CaptureFixture[str]) -> None:
-    assert cli.main(["codecap", "--code", "gross", "--p", "0.05", "--decoder", "mwpm",
-                     "--shots", "10"]) == 2
+    assert (
+        cli.main(
+            ["codecap", "--code", "gross", "--p", "0.05", "--decoder", "mwpm", "--shots", "10"]
+        )
+        == 2
+    )
     assert "cannot be decoded with MWPM" in capsys.readouterr().err
 
 
@@ -83,6 +87,7 @@ def p1(sweep: str, *keys: str) -> Callable[[Numbers], float]:
         for k in keys:
             value = value[int(k)] if isinstance(value, list) else value[k]
         return value
+
     return get
 
 
@@ -100,9 +105,13 @@ def gross(p: str, field: str, decoder: str = "mwpm") -> Callable[[Numbers], floa
 
 def timing(d: int, p: float, method: str) -> Callable[[Numbers], float]:
     def get(n: Numbers) -> float:
-        (row,) = [r for r in n["phase2"]["timing"]
-                  if r["d"] == d and r["p"] == p and r["method"].startswith(method)]
+        (row,) = [
+            r
+            for r in n["phase2"]["timing"]
+            if r["d"] == d and r["p"] == p and r["method"].startswith(method)
+        ]
         return row["us_per_shot"]
+
     return get
 
 
@@ -113,11 +122,17 @@ def timing_ratio(num: str, den: str) -> Callable[[Numbers], float]:
 MAIN_ROW = "| main | d | ~1,000 | **1.30%** | [0.98%, 1.42%] (median 1.08%; no crossing in 5% of"
 REPL_ROW = "| replication | 3d | ~5,000+ | **1.055%** | [1.025%, 1.103%] | 1.1, 1.2% |"
 FOLLOWUP_ROW = "| follow-up | d | **1.168%** | **[1.082%, 1.237%]** | 0% |"
-MWPM_ROW = "| MWPM | 9.13% | 9.84% (also 10.51%) | 10.08% | **9.41%** (also 10.61%) | [8.81%, 10.17%] |"
-BPOSD_ROW = ("| BP-OSD | 8.64% (also 10.08%) | 7.93% (also 9.36%) | 8.97% (also 9.79%) "
-             "| 9.71% (also 10.63%, 11.53%) | [6.98%, 10.64%] |")
+MWPM_ROW = (
+    "| MWPM | 9.13% | 9.84% (also 10.51%) | 10.08% | **9.41%** (also 10.61%) | [8.81%, 10.17%] |"
+)
+BPOSD_ROW = (
+    "| BP-OSD | 8.64% (also 10.08%) | 7.93% (also 9.36%) | 8.97% (also 9.79%) "
+    "| 9.71% (also 10.63%, 11.53%) | [6.98%, 10.64%] |"
+)
 GROSS_2PC = "| 2% | 9.4e-4 ± 0.7e-4 | 10.19 [9.85, 10.57] | **1,246 / 2,480** | 144 / 288 |"
-SLOPES = "3.44, against 5.52 for surface d = 11. (Slopes are report-only. Surface d = 3…11: 2.02, 2.59,"
+SLOPES = (
+    "3.44, against 5.52 for surface d = 11. (Slopes are report-only. Surface d = 3…11: 2.02, 2.59,"
+)
 SLOPES_2 = "3.65, 4.63, 5.52, against ⌈d/2⌉ = 2…6."
 
 
@@ -142,33 +157,85 @@ CHECKS: list[Check] = [
     (REPL_ROW, "1.103%", p1("replication", "bootstrap", "5,7", "hi"), BOOT_PCT),
     (REPL_ROW, "1.1%", p1("replication", "within_2sigma", "5,7", "0"), None),
     (REPL_ROW, "1.2%", p1("replication", "within_2sigma", "5,7", "1"), None),
-    ("| replication | 3d | 1.055% | [1.025%, 1.103%] | 0.2% |", "0.2%",
-     p1("replication", "bootstrap", "5,7", "no_crossing_fraction"), BOOT_FRACTION),
+    (
+        "| replication | 3d | 1.055% | [1.025%, 1.103%] | 0.2% |",
+        "0.2%",
+        p1("replication", "bootstrap", "5,7", "no_crossing_fraction"),
+        BOOT_FRACTION,
+    ),
     (FOLLOWUP_ROW, "1.168%", p1("followup", "crossings", "per_round", "5,7", "0"), None),
     (FOLLOWUP_ROW, "1.082%", p1("followup", "bootstrap", "5,7", "lo"), BOOT_PCT),
     (FOLLOWUP_ROW, "1.237%", p1("followup", "bootstrap", "5,7", "hi"), BOOT_PCT),
-    (FOLLOWUP_ROW, "0%", p1("followup", "bootstrap", "5,7", "no_crossing_fraction"),
-     BOOT_FRACTION),
-    ("**The shift is about +0.11 percentage points", "0.11",
-     lambda n: 100 * (p1("followup", "crossings", "per_round", "5,7", "0")(n)
-                      - p1("replication", "crossings", "per_round", "5,7", "0")(n)), None),
+    (FOLLOWUP_ROW, "0%", p1("followup", "bootstrap", "5,7", "no_crossing_fraction"), BOOT_FRACTION),
+    (
+        "**The shift is about +0.11 percentage points",
+        "0.11",
+        lambda n: (
+            100
+            * (
+                p1("followup", "crossings", "per_round", "5,7", "0")(n)
+                - p1("replication", "crossings", "per_round", "5,7", "0")(n)
+            )
+        ),
+        None,
+    ),
     # Phase 1: low-p slopes (main sweep, report only).
     ("1.93, 2.94 and 4.07 for d = 3, 5, 7", "1.93", p1("main", "slopes", "3"), None),
     ("1.93, 2.94 and 4.07 for d = 3, 5, 7", "2.94", p1("main", "slopes", "5"), None),
     ("1.93, 2.94 and 4.07 for d = 3, 5, 7", "4.07", p1("main", "slopes", "7"), None),
     # Phase 1: per-round rate ratio rounds = d / rounds = 3d, and z-scores.
-    ("| 3 | 1.01–1.13 (higher with fewer rounds) | −0.2 to −3.4 |", "1.01", rounds(3, "ratio", min), None),
-    ("| 3 | 1.01–1.13 (higher with fewer rounds) | −0.2 to −3.4 |", "1.13", rounds(3, "ratio", max), None),
-    ("| 3 | 1.01–1.13 (higher with fewer rounds) | −0.2 to −3.4 |", "−0.2", rounds(3, "z", max), None),
-    ("| 3 | 1.01–1.13 (higher with fewer rounds) | −0.2 to −3.4 |", "−3.4", rounds(3, "z", min), None),
+    (
+        "| 3 | 1.01–1.13 (higher with fewer rounds) | −0.2 to −3.4 |",
+        "1.01",
+        rounds(3, "ratio", min),
+        None,
+    ),
+    (
+        "| 3 | 1.01–1.13 (higher with fewer rounds) | −0.2 to −3.4 |",
+        "1.13",
+        rounds(3, "ratio", max),
+        None,
+    ),
+    (
+        "| 3 | 1.01–1.13 (higher with fewer rounds) | −0.2 to −3.4 |",
+        "−0.2",
+        rounds(3, "z", max),
+        None,
+    ),
+    (
+        "| 3 | 1.01–1.13 (higher with fewer rounds) | −0.2 to −3.4 |",
+        "−3.4",
+        rounds(3, "z", min),
+        None,
+    ),
     ("| 5 | 0.92–1.00 | 0.0 to 2.3 |", "0.92", rounds(5, "ratio", min), None),
     ("| 5 | 0.92–1.00 | 0.0 to 2.3 |", "1.00", rounds(5, "ratio", max), None),
     ("| 5 | 0.92–1.00 | 0.0 to 2.3 |", "0.0", rounds(5, "z", min), None),
     ("| 5 | 0.92–1.00 | 0.0 to 2.3 |", "2.3", rounds(5, "z", max), None),
-    ("| 7 | 0.87–0.94 (lower with fewer rounds, all 5 points) | 1.6 to 4.2 |", "0.87", rounds(7, "ratio", min), None),
-    ("| 7 | 0.87–0.94 (lower with fewer rounds, all 5 points) | 1.6 to 4.2 |", "0.94", rounds(7, "ratio", max), None),
-    ("| 7 | 0.87–0.94 (lower with fewer rounds, all 5 points) | 1.6 to 4.2 |", "1.6", rounds(7, "z", min), None),
-    ("| 7 | 0.87–0.94 (lower with fewer rounds, all 5 points) | 1.6 to 4.2 |", "4.2", rounds(7, "z", max), None),
+    (
+        "| 7 | 0.87–0.94 (lower with fewer rounds, all 5 points) | 1.6 to 4.2 |",
+        "0.87",
+        rounds(7, "ratio", min),
+        None,
+    ),
+    (
+        "| 7 | 0.87–0.94 (lower with fewer rounds, all 5 points) | 1.6 to 4.2 |",
+        "0.94",
+        rounds(7, "ratio", max),
+        None,
+    ),
+    (
+        "| 7 | 0.87–0.94 (lower with fewer rounds, all 5 points) | 1.6 to 4.2 |",
+        "1.6",
+        rounds(7, "z", min),
+        None,
+    ),
+    (
+        "| 7 | 0.87–0.94 (lower with fewer rounds, all 5 points) | 1.6 to 4.2 |",
+        "4.2",
+        rounds(7, "z", max),
+        None,
+    ),
     # Phase 2, experiment 1: code-capacity crossings (per shot).
     (MWPM_ROW, "9.13%", cc("mwpm", "3,5", 0), None),
     (MWPM_ROW, "9.84%", cc("mwpm", "5,7", 0), None),
@@ -176,8 +243,18 @@ CHECKS: list[Check] = [
     (MWPM_ROW, "10.08%", cc("mwpm", "7,9", 0), None),
     (MWPM_ROW, "9.41%", cc("mwpm", "9,11", 0), None),
     (MWPM_ROW, "10.61%", cc("mwpm", "9,11", 1), None),
-    (MWPM_ROW, "8.81%", lambda n: n["phase2"]["threshold"]["crossings"]["mwpm"]["9,11"]["lo"], BOOT_PCT),
-    (MWPM_ROW, "10.17%", lambda n: n["phase2"]["threshold"]["crossings"]["mwpm"]["9,11"]["hi"], BOOT_PCT),
+    (
+        MWPM_ROW,
+        "8.81%",
+        lambda n: n["phase2"]["threshold"]["crossings"]["mwpm"]["9,11"]["lo"],
+        BOOT_PCT,
+    ),
+    (
+        MWPM_ROW,
+        "10.17%",
+        lambda n: n["phase2"]["threshold"]["crossings"]["mwpm"]["9,11"]["hi"],
+        BOOT_PCT,
+    ),
     (BPOSD_ROW, "8.64%", cc("bposd", "3,5", 0), None),
     (BPOSD_ROW, "10.08%", cc("bposd", "3,5", 1), None),
     (BPOSD_ROW, "7.93%", cc("bposd", "5,7", 0), None),
@@ -187,8 +264,18 @@ CHECKS: list[Check] = [
     (BPOSD_ROW, "9.71%", cc("bposd", "9,11", 0), None),
     (BPOSD_ROW, "10.63%", cc("bposd", "9,11", 1), None),
     (BPOSD_ROW, "11.53%", cc("bposd", "9,11", 2), None),
-    (BPOSD_ROW, "6.98%", lambda n: n["phase2"]["threshold"]["crossings"]["bposd"]["9,11"]["lo"], BOOT_PCT),
-    (BPOSD_ROW, "10.64%", lambda n: n["phase2"]["threshold"]["crossings"]["bposd"]["9,11"]["hi"], BOOT_PCT),
+    (
+        BPOSD_ROW,
+        "6.98%",
+        lambda n: n["phase2"]["threshold"]["crossings"]["bposd"]["9,11"]["lo"],
+        BOOT_PCT,
+    ),
+    (
+        BPOSD_ROW,
+        "10.64%",
+        lambda n: n["phase2"]["threshold"]["crossings"]["bposd"]["9,11"]["hi"],
+        BOOT_PCT,
+    ),
     # Phase 2, experiment 2: gross code vs 12 surface patches.
     (GROSS_2PC, "9.4e-4", gross("0.02", "gross_rate"), None),
     (GROSS_2PC, "0.7e-4", gross("0.02", "gross_sigma"), None),
@@ -211,27 +298,99 @@ CHECKS: list[Check] = [
     (SLOPES_2, "4.63", surface_slope("9"), None),
     (SLOPES_2, "5.52", surface_slope("11"), None),
     # Phase 2, experiment 3: decoder timing (us per shot), and the ratios quoted in the text.
-    ("| surface d=3 (9) | 0.05 | 11 µs | 4.1 µs | 0.08 µs |", "11", timing(3, 0.05, "BP-OSD"), None),
-    ("| surface d=3 (9) | 0.05 | 11 µs | 4.1 µs | 0.08 µs |", "4.1", timing(3, 0.05, "PyMatching (per"), None),
-    ("| surface d=3 (9) | 0.05 | 11 µs | 4.1 µs | 0.08 µs |", "0.08", timing(3, 0.05, "PyMatching (decode"), None),
-    ("| surface d=7 (49) | 0.05 | 217 µs | 5.0 µs | 0.73 µs |", "217", timing(7, 0.05, "BP-OSD"), None),
-    ("| surface d=7 (49) | 0.05 | 217 µs | 5.0 µs | 0.73 µs |", "5.0", timing(7, 0.05, "PyMatching (per"), None),
-    ("| surface d=7 (49) | 0.05 | 217 µs | 5.0 µs | 0.73 µs |", "0.73", timing(7, 0.05, "PyMatching (decode"), None),
-    ("| surface d=11 (121) | 0.05 | 807 µs | 6.8 µs | 2.6 µs |", "807", timing(11, 0.05, "BP-OSD"), None),
-    ("| surface d=11 (121) | 0.05 | 807 µs | 6.8 µs | 2.6 µs |", "6.8", timing(11, 0.05, "PyMatching (per"), None),
-    ("| surface d=11 (121) | 0.05 | 807 µs | 6.8 µs | 2.6 µs |", "2.6", timing(11, 0.05, "PyMatching (decode"), None),
+    (
+        "| surface d=3 (9) | 0.05 | 11 µs | 4.1 µs | 0.08 µs |",
+        "11",
+        timing(3, 0.05, "BP-OSD"),
+        None,
+    ),
+    (
+        "| surface d=3 (9) | 0.05 | 11 µs | 4.1 µs | 0.08 µs |",
+        "4.1",
+        timing(3, 0.05, "PyMatching (per"),
+        None,
+    ),
+    (
+        "| surface d=3 (9) | 0.05 | 11 µs | 4.1 µs | 0.08 µs |",
+        "0.08",
+        timing(3, 0.05, "PyMatching (decode"),
+        None,
+    ),
+    (
+        "| surface d=7 (49) | 0.05 | 217 µs | 5.0 µs | 0.73 µs |",
+        "217",
+        timing(7, 0.05, "BP-OSD"),
+        None,
+    ),
+    (
+        "| surface d=7 (49) | 0.05 | 217 µs | 5.0 µs | 0.73 µs |",
+        "5.0",
+        timing(7, 0.05, "PyMatching (per"),
+        None,
+    ),
+    (
+        "| surface d=7 (49) | 0.05 | 217 µs | 5.0 µs | 0.73 µs |",
+        "0.73",
+        timing(7, 0.05, "PyMatching (decode"),
+        None,
+    ),
+    (
+        "| surface d=11 (121) | 0.05 | 807 µs | 6.8 µs | 2.6 µs |",
+        "807",
+        timing(11, 0.05, "BP-OSD"),
+        None,
+    ),
+    (
+        "| surface d=11 (121) | 0.05 | 807 µs | 6.8 µs | 2.6 µs |",
+        "6.8",
+        timing(11, 0.05, "PyMatching (per"),
+        None,
+    ),
+    (
+        "| surface d=11 (121) | 0.05 | 807 µs | 6.8 µs | 2.6 µs |",
+        "2.6",
+        timing(11, 0.05, "PyMatching (decode"),
+        None,
+    ),
     ("| gross (144) | 0.05 | 293 µs | — | — |", "293", timing(12, 0.05, "BP-OSD"), None),
-    ("| surface d=11 (121) | 0.10 | 1,053 µs | 11.8 µs | 6.7 µs |", "1,053", timing(11, 0.1, "BP-OSD"), None),
-    ("| surface d=11 (121) | 0.10 | 1,053 µs | 11.8 µs | 6.7 µs |", "11.8", timing(11, 0.1, "PyMatching (per"), None),
-    ("| surface d=11 (121) | 0.10 | 1,053 µs | 11.8 µs | 6.7 µs |", "6.7", timing(11, 0.1, "PyMatching (decode"), None),
+    (
+        "| surface d=11 (121) | 0.10 | 1,053 µs | 11.8 µs | 6.7 µs |",
+        "1,053",
+        timing(11, 0.1, "BP-OSD"),
+        None,
+    ),
+    (
+        "| surface d=11 (121) | 0.10 | 1,053 µs | 11.8 µs | 6.7 µs |",
+        "11.8",
+        timing(11, 0.1, "PyMatching (per"),
+        None,
+    ),
+    (
+        "| surface d=11 (121) | 0.10 | 1,053 µs | 11.8 µs | 6.7 µs |",
+        "6.7",
+        timing(11, 0.1, "PyMatching (decode"),
+        None,
+    ),
     ("| gross (144) | 0.10 | 1,676 µs | — | — |", "1,676", timing(12, 0.1, "BP-OSD"), None),
     # "about 3–120×" and "about 300×": rounded to the leading digit(s), so +/- half of that.
-    ("BP-OSD is about 3–120× slower than PyMatching's per-shot call", "3",
-     lambda n: timing(3, 0.05, "BP-OSD")(n) / timing(3, 0.05, "PyMatching (per")(n), None),
-    ("BP-OSD is about 3–120× slower than PyMatching's per-shot call", "120",
-     timing_ratio("BP-OSD", "PyMatching (per"), 5.0),
-    ("about 300× slower than its batch mode at d = 11", "300",
-     timing_ratio("BP-OSD", "PyMatching (decode"), 50.0),
+    (
+        "BP-OSD is about 3–120× slower than PyMatching's per-shot call",
+        "3",
+        lambda n: timing(3, 0.05, "BP-OSD")(n) / timing(3, 0.05, "PyMatching (per")(n),
+        None,
+    ),
+    (
+        "BP-OSD is about 3–120× slower than PyMatching's per-shot call",
+        "120",
+        timing_ratio("BP-OSD", "PyMatching (per"),
+        5.0,
+    ),
+    (
+        "about 300× slower than its batch mode at d = 11",
+        "300",
+        timing_ratio("BP-OSD", "PyMatching (decode"),
+        50.0,
+    ),
 ]
 
 
@@ -247,8 +406,11 @@ def reproduced(tmp_path_factory: pytest.TempPathFactory) -> tuple[Path, Numbers]
 
 @pytest.mark.parametrize("snippet, shown, get, tol", CHECKS, ids=[c[1] for c in CHECKS])
 def test_reproduced_number_matches_readme(
-    reproduced: tuple[Path, Numbers], snippet: str, shown: str,
-    get: Callable[[Numbers], float], tol: float | None,
+    reproduced: tuple[Path, Numbers],
+    snippet: str,
+    shown: str,
+    get: Callable[[Numbers], float],
+    tol: float | None,
 ) -> None:
     expected, half_unit = parse_shown(shown)
     tol = half_unit if tol is None else tol
@@ -281,7 +443,9 @@ def test_reproduced_claims(reproduced: tuple[Path, Numbers]) -> None:
         for p, e in n2["gross"][decoder].items():
             if float(p) >= 0.03:
                 assert e["d_star"] is None and e["gross_rate"] < e["p12"]["11"]
-    assert abs(n2["gross"]["bposd"]["0.02"]["d_star"] - n2["gross"]["mwpm"]["0.02"]["d_star"]) < 0.01
+    assert (
+        abs(n2["gross"]["bposd"]["0.02"]["d_star"] - n2["gross"]["mwpm"]["0.02"]["d_star"]) < 0.01
+    )
     # "Surface d = 9 and 11 at p = 2% hit the shot cap with 168 and 47 errors."
     capped = {(r["d"], r["p"]): r["errors"] for r in n2["gross_shot_cap"] if r["decoder"] == "mwpm"}
     assert capped == {(9, 0.02): 168, (11, 0.02): 47}
@@ -294,6 +458,9 @@ def test_reproduce_writes_every_readme_plot(reproduced: tuple[Path, Numbers]) ->
     for stem in cli.PHASE2_PLOTS:
         assert (out / "phase2" / f"{stem}.png").stat().st_size > 0
     # Every plot the README embeds is one that reproduce rebuilds.
-    embedded = {line.split("(results/")[1].split(".png")[0]
-                for line in README.splitlines() if line.startswith("![")}
+    embedded = {
+        line.split("(results/")[1].split(".png")[0]
+        for line in README.splitlines()
+        if line.startswith("![")
+    }
     assert embedded == set(cli.PHASE1_PLOTS) | set(cli.PHASE2_PLOTS)

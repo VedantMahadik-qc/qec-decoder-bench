@@ -1,8 +1,8 @@
 """Plots for the Phase 2 code-capacity experiments, from the committed CSVs.
 
-    python scripts/plot_code_capacity.py threshold
-    python scripts/plot_code_capacity.py gross
-    python scripts/plot_code_capacity.py timing
+python scripts/plot_code_capacity.py threshold
+python scripts/plot_code_capacity.py gross
+python scripts/plot_code_capacity.py timing
 """
 
 import sys
