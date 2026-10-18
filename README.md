@@ -126,7 +126,7 @@ could not be ruled out.
 | Sweep | Rounds | (5,7) per-round crossing | Bootstrap 95% interval | Replicates with no crossing |
 |---|---|---|---|---|
 | main | d | 1.30% | [0.98%, 1.42%] | 5% |
-| follow-up | d | **1.167%** | **[1.082%, 1.237%]** | 0% |
+| follow-up | d | **1.168%** | **[1.082%, 1.237%]** | 0% |
 | replication | 3d | 1.055% | [1.025%, 1.103%] | 0.2% |
 
 At the p values the sweeps share, the follow-up's per-round rates agree with the main sweep's
@@ -141,7 +141,7 @@ rounds = d shifts the per-round (5,7) crossing upward**, to about 1.17%. Three c
 - **The intervals almost touch.** The rule compares against the replication's point value. The
   replication's own interval [1.025%, 1.103%] overlaps the follow-up's [1.082%, 1.237%] in a narrow
   1.08–1.10% window. The shift is resolved, but only modestly.
-- **Rounds = d still misses the band.** The follow-up's point estimate (1.167%) is still outside
+- **Rounds = d still misses the band.** The follow-up's point estimate (1.168%) is still outside
   the pre-registered 0.7–1.1% band. The band was set from the reference's rounds = 3d settings,
   and only the replication, which uses those settings, passes it.
 
