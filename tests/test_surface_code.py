@@ -28,6 +28,19 @@ def test_circuit_distance_equals_code_distance(d: int) -> None:
     assert len(dem.shortest_graphlike_error()) == d
 
 
+@pytest.mark.slow
+def test_larger_distance_suppresses_errors_below_threshold() -> None:
+    # Known behavior: below threshold (~1%, Stim getting_started.ipynb section 9),
+    # increasing d lowers p_L. Require ~3-sigma separation so the test can't pass by luck.
+    shots = 200_000
+    p = 2e-3
+    rate3 = count_logical_errors(surface_code_memory_z(3, p), shots=shots, seed=11) / shots
+    rate5 = count_logical_errors(surface_code_memory_z(5, p), shots=shots, seed=12) / shots
+    sigma3 = math.sqrt(rate3 * (1 - rate3) / shots)
+    sigma5 = math.sqrt(rate5 * (1 - rate5) / shots)
+    assert rate5 + 3 * sigma5 < rate3 - 3 * sigma3
+
+
 def test_high_noise_saturates_at_one_half() -> None:
     # Analytic limit: when noise fully scrambles the logical observable, the decoder
     # is right only by chance, so p_L -> 1/2.
