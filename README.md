@@ -15,11 +15,12 @@ pip install -e ".[dev]"
 pytest                      # all tests; `pytest -m "not slow"` skips Monte Carlo-heavy ones
 python scripts/run_surface_sweep.py --sweep main          # -> results/surface_sweep.csv
 python scripts/run_surface_sweep.py --sweep replication   # -> results/notebook_replication.csv
+python scripts/run_surface_sweep.py --sweep followup      # -> results/rounds_d_followup.csv
 python scripts/plot_surface_sweep.py results/surface_sweep.csv
 python scripts/plot_surface_sweep.py results/notebook_replication.csv
 ```
 
-Both sweep CSVs are committed, so you can regenerate the plots and the validation numbers without
+All sweep CSVs are committed, so you can regenerate the plots and the validation numbers without
 re-running the sweeps. sinter resumes from an existing CSV instead of starting over.
 
 ## Phase 1: rotated surface code memory experiment
@@ -98,13 +99,47 @@ count from Binomial(shots, errors/shots) 2,000 times and re-runs the same estima
    Around 1.0–1.2%, it makes d=7 look relatively better than d=5 than it does at r = 3d. That
    pushes the crossing up, in the same direction as the miss we observed.
 
-**Conclusion.** The rounds-dependence of the per-round rate is real and statistically significant
-(item 3), and it shifts the main sweep's crossing in the observed direction. **We have not shown
-that it explains the full shift from ~1.06% to 1.30%.** The main sweep's crossing interval
-[0.98%, 1.42%] contains the replication value, so statistical noise in a poorly resolved crossing
-(item 2) remains a sufficient explanation on its own. The pre-registered band was not changed. The
-main sweep failed it; the replication, with the reference's exact settings, passed.
+**Interim conclusion (before the follow-up).** The rounds-dependence was significant and pointed the
+right way. But the main sweep's interval [0.98%, 1.42%] contained the replication value, so noise
+could not be ruled out.
 
-**Next step to separate the two explanations:** re-sample the main sweep (rounds = d) at p ∈ {0.010, 0.011, 0.012} with
-≥5,000 errors per point. If the crossing stays near 1.3% with a tight interval, the boundary effect
-accounts for the shift; if it moves toward 1.05%, it was noise.
+### Follow-up: does rounds = d shift the crossing?
+
+**Pre-registered design and decision rule** (fixed before running):
+- Settings: main-sweep settings (rounds = d), d = 5 and 7, a single evenly spaced grid
+  p ∈ {0.009, 0.010, …, 0.014}, ≥5,000 errors per point.
+- Output: saved separately to `results/rounds_d_followup.csv`, not merged into the main sweep.
+- Rule: if the bootstrap 95% interval of the (5,7) per-round crossing excludes 1.055% (the
+  replication value), conclude that rounds = d shifts the crossing. If it includes 1.055%,
+  conclude the original miss is consistent with noise.
+
+**Result:**
+
+| Sweep | Rounds | (5,7) per-round crossing | Bootstrap 95% interval | Replicates with no crossing |
+|---|---|---|---|---|
+| main | d | 1.30% | [0.98%, 1.42%] | 5% |
+| follow-up | d | **1.167%** | **[1.082%, 1.237%]** | 0% |
+| replication | 3d | 1.055% | [1.025%, 1.103%] | 0.2% |
+
+At the p values the sweeps share, the follow-up's per-round rates agree with the main sweep's
+within ~2σ. So the follow-up is the same experiment as the main sweep, measured more precisely.
+
+**Conclusion (per the pre-registered rule).** The follow-up interval excludes 1.055%, so **running
+rounds = d shifts the per-round (5,7) crossing upward**, to about 1.17%. Three caveats:
+
+- **The shift is about +0.11 percentage points, not +0.25.** The main sweep's 1.30% point
+  estimate was this real shift *plus* statistical noise, made worse by the near-duplicate grid
+  points (item 2).
+- **The intervals almost touch.** The rule compares against the replication's point value. The
+  replication's own interval [1.025%, 1.103%] overlaps the follow-up's [1.082%, 1.237%] in a narrow
+  1.08–1.10% window. The shift is resolved, but only modestly.
+- **Rounds = d still misses the band.** The follow-up's point estimate (1.167%) is still outside
+  the pre-registered 0.7–1.1% band. The band was set from the reference's rounds = 3d settings,
+  and only the replication, which uses those settings, passes it.
+
+**Mechanism (interpretation, not separately tested).** This is the time-boundary effect from item
+3. The per-round conversion assumes every round is identical, but the reset round and the final
+data-measurement round are not. With only d rounds, those boundary rounds make up a larger share
+of each shot, and that share differs between d=5 (5 rounds) and d=7 (7 rounds). This biases the
+comparison between distances. **Practical rule for later phases:** run at least 3d rounds, or
+report per-shot rates at a fixed number of rounds, before quoting a threshold.

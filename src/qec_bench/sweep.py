@@ -20,6 +20,11 @@ MAIN_PS = sorted(
 # Stim doc/getting_started.ipynb section 9: rounds = 3d, these five p values.
 NOTEBOOK_PS = (0.008, 0.009, 0.010, 0.011, 0.012)
 
+# Follow-up on the main sweep's failed crossing check: rounds = d, d = 5 and 7 only,
+# one evenly spaced grid (no merged grids, so no near-duplicate p values).
+FOLLOWUP_DISTANCES = (5, 7)
+FOLLOWUP_PS = (0.009, 0.010, 0.011, 0.012, 0.013, 0.014)
+
 
 def make_tasks(
     distances: Iterable[int], ps: Iterable[float], rounds_factor: int = 1

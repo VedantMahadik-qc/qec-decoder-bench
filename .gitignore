@@ -14,4 +14,5 @@ dist/
 *.csv
 !results/surface_sweep.csv
 !results/notebook_replication.csv
+!results/rounds_d_followup.csv
 results/scratch/
