@@ -7,8 +7,10 @@ __pycache__/
 build/
 dist/
 
-# Results: plots are regenerated from CSVs; only the final sweep CSVs are committed.
+# Results: only the final sweep CSVs and the two README plots are committed.
 *.png
+!results/surface_sweep.png
+!results/notebook_replication.png
 *.csv
 !results/surface_sweep.csv
 !results/notebook_replication.csv
