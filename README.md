@@ -5,16 +5,52 @@
 A benchmark of quantum error-correction decoders, built on [Stim](https://github.com/quantumlib/Stim)
 (circuits and detector error models), [PyMatching](https://github.com/oscarhiggott/PyMatching)
 (minimum-weight perfect matching), BP-OSD from [`ldpc`](https://github.com/quantumgizmos/ldpc), and
-sinter (parallel Monte Carlo).
+sinter (parallel Monte Carlo). It covers the rotated surface code under circuit-level noise
+(Phase 1), and BP-OSD and the [[144,12,12]] bivariate bicycle ("gross") code under code-capacity
+noise (Phase 2). Every result is checked against an analytic limit or a cited reference value, with
+acceptance criteria fixed before the sweep ran.
 
-Roadmap: rotated surface code with PyMatching (Phase 1, below), then BP-OSD and the
-[[144,12,12]] bivariate bicycle ("gross") code under code-capacity noise (Phase 2, below).
+**Key results**
 
-## Usage
+- **Circuit-level surface-code threshold.** With the settings of Stim's getting-started notebook
+  (rounds = 3d), the d = 5 / d = 7 per-round crossing is **1.055%** (bootstrap 95% [1.025%, 1.103%]),
+  matching its "roughly 1%". Running rounds = d instead shifts the crossing to **1.168%**
+  [1.082%, 1.237%], a time-boundary effect. [Details](#phase-1-rotated-surface-code-memory-experiment)
+- **Code-capacity MWPM threshold.** The d = 9 / 11 crossing is **9.41%** [8.81%, 10.17%]. It passes
+  the pre-registered 9–11% band but sits slightly below the 10.31% random-bond Ising reference
+  (Wang, Harrington & Preskill 2003). [Details](#experiment-1-surface-code-code-capacity-threshold)
+- **Gross code vs 12 surface patches.** At p = 2% under code capacity, one gross code matches 12
+  surface patches of distance d* ≈ 10.2, with **~8.6–8.7× fewer qubits** (288 vs 2,480 total). This is
+  code capacity only, not a reproduction of Bravyi et al.'s circuit-level result.
+  [Details](#experiment-2-gross-code-vs-12-surface-code-copies)
+- **BP-OSD vs PyMatching.** On the surface code, BP-OSD is about as accurate as MWPM on identical
+  syndromes, but about **120× slower** per call at d = 11 (807 µs vs 6.8 µs).
+  [Details](#experiment-3-decoder-timing)
+
+## Quickstart
 
 ```bash
 pip install -e ".[dev]"
-pytest                      # all tests; `pytest -m "not slow"` skips Monte Carlo-heavy ones
+
+# One circuit-level point: rotated surface code, Stim + PyMatching
+qec-bench surface --d 5 --p 0.001 --rounds 15 --shots 100000
+
+# One code-capacity point: gross code with BP-OSD (or --code surface --d 5 --decoder mwpm)
+qec-bench codecap --code gross --p 0.05 --decoder bposd --shots 10000
+
+# Rebuild every README plot and number from the committed CSVs (no re-simulation)
+qec-bench reproduce phase2        # or phase1; writes to results/reproduced/
+```
+
+Tests: `pytest -m "not slow"` (fast suite, run in CI on Python 3.11 and 3.12). Plain `pytest`
+also runs the Monte Carlo-heavy tests. Lint: `ruff check . && ruff format --check .`.
+
+### Re-running the sweeps
+
+All sweep CSVs are committed, so you can regenerate the plots and the validation numbers without
+re-running the sweeps. sinter resumes from an existing CSV instead of starting over.
+
+```bash
 python scripts/run_surface_sweep.py --sweep main          # -> results/surface_sweep.csv
 python scripts/run_surface_sweep.py --sweep replication   # -> results/notebook_replication.csv
 python scripts/run_surface_sweep.py --sweep followup      # -> results/rounds_d_followup.csv
@@ -30,8 +66,20 @@ python scripts/analyze_code_capacity.py gross                   # matched d* and
 python scripts/plot_code_capacity.py threshold                  # also: gross, timing
 ```
 
-All sweep CSVs are committed, so you can regenerate the plots and the validation numbers without
-re-running the sweeps. sinter resumes from an existing CSV instead of starting over.
+## Results
+
+- [Phase 1: rotated surface code memory experiment](#phase-1-rotated-surface-code-memory-experiment)
+  (circuit-level noise, PyMatching): validation checks, threshold crossing, and the rounds = d
+  follow-up.
+- [Phase 2: BP-OSD and the [[144,12,12]] gross code](#phase-2-bp-osd-and-the-1441212-gross-code-code-capacity-noise)
+  (code-capacity noise): code construction checks, the surface-code threshold, gross vs 12 surface
+  patches, and decoder timing.
+
+Where the numbers come from: the "Validation checks" tables report what the tests in `tests/`
+measure. Everything else is computed from the committed CSVs in `results/`, and
+`qec-bench reproduce` regenerates it. `tests/test_cli.py` checks the quoted values against that
+output. The one exception is the BP convergence fractions in Experiment 3, which came from a
+separate measurement.
 
 ## Phase 1: rotated surface code memory experiment
 
@@ -327,7 +375,8 @@ Python overhead. "decode_batch" is PyMatching's realistic usage. BP-OSD in `ldpc
   d), and about 300× slower than its batch mode at d = 11.
 - BP-OSD is *faster* on the gross code (n = 144) than on surface d = 11 (n = 121) at p = 5%. The
   measured reason: BP alone converges on 86% of gross-code shots but on only 20% of surface d = 11
-  shots (2,000 shots each, p = 0.05). The expensive OSD step runs only when BP fails. That BP
+  shots (2,000 shots each, p = 0.05; a separate measurement, not in the committed CSVs).
+  The expensive OSD step runs only when BP fails. That BP
   struggles because of the surface code's degenerate, short-cycle Tanner graph is an interpretation,
   not tested here. At p = 10%, BP converges on only 20% of gross shots (2% for surface d = 11), and
   the gross code becomes the slowest.
@@ -351,3 +400,11 @@ Python overhead. "decode_batch" is PyMatching's realistic usage. BP-OSD in `ldpc
    This leaves out measurement errors and circuit-level noise, which Bravyi et al. do model. The
    saving is consistent in size with their ~10× (288 vs ~3,000 physical qubits, circuit-level), but
    this is a code-capacity result and not a reproduction of theirs.
+
+## License and credits
+
+MIT. See [LICENSE](LICENSE).
+
+**Built with Claude Code.** The code, tests and documentation were developed with Anthropic's
+[Claude Code](https://claude.com/claude-code), working under the rules in [CLAUDE.md](CLAUDE.md):
+pre-registered acceptance criteria, cited reference values, and no tuning toward expected numbers.
